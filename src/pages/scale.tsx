@@ -10,6 +10,7 @@ import {
     MainColorSelector,
     Triggers,
 } from '../components'
+import { useDebounce } from '../hooks'
 import {
     defaultState,
     errorColor,
@@ -107,10 +108,9 @@ const TriggersSection = styled.div`
 const Scale: React.FC = () => {
     const location = useLocation()
 
-    const hash = useMemo(
-        () => hashToObject(decodeURI(location.hash)),
-        [location.hash]
-    )
+    const hash = useMemo(() => {
+        return hashToObject(decodeURI(location.hash))
+    }, [location.hash])
 
     const initialState = hash || defaultState
     const [mainColor, setMainColor] = useState(initialState.mainColor)
@@ -159,20 +159,6 @@ const Scale: React.FC = () => {
         g,
         b,
         bgColor,
-    }
-
-    if (hash) {
-        window.location.hash = encodeURI(Object.values(hash).join('/'))
-    }
-
-    const updateHash = () => {
-        window.location.hash = encodeURI(Object.values(currentState).join('/'))
-    }
-
-    const updateThemeColor = () => {
-        document
-            .getElementById('themeMetaTag')
-            ?.setAttribute('content', numberToHex(mainColor))
     }
 
     const updateRgbWithMainColor = (color: string) => {
@@ -276,10 +262,18 @@ const Scale: React.FC = () => {
         document.documentElement.style.setProperty('--bodyBg', color)
     }, [bgColor])
 
-    useEffect(() => {
-        updateHash()
-        updateThemeColor()
-    }, [])
+    useDebounce(
+        () => {
+            window.location.hash = encodeURI(
+                Object.values(currentState).join('/')
+            )
+            document
+                .getElementById('themeMetaTag')
+                ?.setAttribute('content', numberToHex(mainColor))
+        },
+        100,
+        [currentState]
+    )
 
     useEffect(() => {
         const givenColor = isValidHex(numberToHex(mainColor))
